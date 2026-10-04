@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EMI Calculator</title>
+<style>
+  :root {
+    --bg: #eef2ef;
+    --card: #ffffff;
+    --ink: #17302b;
+    --muted: #5d7570;
+    --line: #d8e2de;
+    --principal: #0f6b5c;
+    --interest: #e0a23a;
+    --accent: #0f6b5c;
+    --accent-ink: #ffffff;
+    --err: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101a18;
+      --card: #172623;
+      --ink: #e6f0ed;
+      --muted: #96aca6;
+      --line: #284039;
+      --principal: #3fb59f;
+      --interest: #e8b04f;
+      --accent: #3fb59f;
+      --accent-ink: #0b1a17;
+      --err: #ff8a80;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+  .wrap { width: 100%; max-width: 480px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: 0.95rem; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 16px;
+  }
+  label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
+  .field { margin-bottom: 16px; }
+  .input-box {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    overflow: hidden;
+  }
+  .input-box:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .input-box span { padding: 0 12px; color: var(--muted); font-weight: 600; }
+  .input-box input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font-size: 1.05rem;
+    padding: 12px 12px 12px 0;
+    outline: none;
+  }
+  .input-box span.suffix { padding: 0 12px 0 0; }
+  .input-box input.has-suffix { padding-left: 12px; }
+  button {
+    width: 100%;
+    border: 0;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 13px;
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(1.08); }
+  button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  .error { color: var(--err); font-size: 0.9rem; margin: 12px 0 0; min-height: 1.2em; }
+  #results[hidden] { display: none; }
+  .emi-label { color: var(--muted); font-size: 0.9rem; margin: 0; }
+  .emi-value { font-size: 2.4rem; font-weight: 700; margin: 2px 0 18px; letter-spacing: -0.02em; }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+  }
+  .row .k { color: var(--muted); }
+  .row .v { font-weight: 700; }
+  .bar {
+    display: flex;
+    height: 16px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 18px 0 10px;
+    background: var(--line);
+  }
+  .bar .p { background: var(--principal); transition: width .4s ease; }
+  .bar .i { background: var(--interest); transition: width .4s ease; }
+  .legend { display: flex; justify-content: space-between; font-size: 0.88rem; gap: 12px; }
+  .legend div { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  @media (prefers-reduced-motion: reduce) { .bar .p, .bar .i { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>EMI Calculator</h1>
+  <p class="sub">Work out your monthly loan instalment.</p>
+
+  <div class="card">
+    <div class="field">
+      <label for="amount">Loan Amount</label>
+      <div class="input-box">
+        <span>₹</span>
+        <input id="amount" type="number" min="0" step="any" inputmode="decimal" value="1000000">
+      </div>
+    </div>
+    <div class="field">
+      <label for="rate">Interest Rate (per year)</label>
+      <div class="input-box">
+        <input id="rate" class="has-suffix" type="number" min="0" step="any" inputmode="decimal" value="8.5">
+        <span class="suffix">%</span>
+      </div>
+    </div>
+    <div class="field">
+      <label for="years">Loan Tenure</label>
+      <div class="input-box">
+        <input id="years" class="has-suffix" type="number" min="0" step="any" inputmode="decimal" value="5">
+        <span class="suffix">years</span>
+      </div>
+    </div>
+    <button id="calc" type="button">Calculate</button>
+    <p class="error" id="error" role="alert"></p>
+  </div>
+
+  <div class="card" id="results" hidden>
+    <p class="emi-label">Monthly EMI</p>
+    <p class="emi-value" id="emi">₹0</p>
+    <div class="row"><span class="k">Principal Amount</span><span class="v" id="principal">₹0</span></div>
+    <div class="row"><span class="k">Total Interest Payable</span><span class="v" id="interest">₹0</span></div>
+    <div class="row"><span class="k">Total Amount Payable</span><span class="v" id="total">₹0</span></div>
+
+    <div class="bar" role="img" aria-label="Principal versus interest share of total payable">
+      <div class="p" id="barP"></div>
+      <div class="i" id="barI"></div>
+    </div>
+    <div class="legend">
+      <div><span class="dot" style="background:var(--principal)"></span>Principal <strong id="pctP"></strong></div>
+      <div><span class="dot" style="background:var(--interest)"></span>Interest <strong id="pctI"></strong></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
+  var rupee = function (n) { return "₹" + fmt.format(Math.round(n)); };
+
+  function calculate() {
+    var P = parseFloat($("amount").value);
+    var annual = parseFloat($("rate").value);
+    var years = parseFloat($("years").value);
+    var err = $("error");
+    err.textContent = "";
+
+    if (!(P > 0) || !(annual >= 0) || !(years > 0)) {
+      err.textContent = "Enter a loan amount and tenure above 0, and an interest rate of 0 or more.";
+      $("results").hidden = true;
+      return;
+    }
+
+    var R = annual / 12 / 100;       // monthly interest rate
+    var N = Math.round(years * 12);  // number of months
+    if (N < 1) {
+      err.textContent = "Tenure must be at least 1 month.";
+      $("results").hidden = true;
+      return;
+    }
+
+    var emi;
+    if (R === 0) {
+      emi = P / N;                   // no-interest case avoids divide by zero
+    } else {
+      var g = Math.pow(1 + R, N);
+      emi = (P * R * g) / (g - 1);
+    }
+
+    var total = emi * N;
+    var interest = total - P;
+    var pP = (P / total) * 100;
+    var pI = 100 - pP;
+
+    $("emi").textContent = rupee(emi);
+    $("principal").textContent = rupee(P);
+    $("interest").textContent = rupee(interest);
+    $("total").textContent = rupee(total);
+    $("barP").style.width = pP + "%";
+    $("barI").style.width = pI + "%";
+    $("pctP").textContent = pP.toFixed(1) + "%";
+    $("pctI").textContent = pI.toFixed(1) + "%";
+    $("results").hidden = false;
+  }
+
+  $("calc").addEventListener("click", calculate);
+  ["amount", "rate", "years"].forEach(function (id) {
+    $(id).addEventListener("keydown", function (e) { if (e.key === "Enter") calculate(); });
+  });
+</script>
+</body>
+</html>
